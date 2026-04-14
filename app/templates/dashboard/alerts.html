@@ -1,0 +1,437 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Alerts{% endblock %}
+
+{% block extra_css %}
+<style>
+    .alerts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .alert-form-panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 24px;
+    }
+
+    .panel-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        color: #4b5563;
+        margin-bottom: 7px;
+        font-weight: 500;
+    }
+
+    .form-group select,
+    .form-group input {
+        width: 100%;
+        padding: 11px 14px;
+        background: #e5e7eb;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        color: #111827;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus {
+        border-color: #3b82f6;
+    }
+
+    .form-group select option {
+        background: #e5e7eb;
+    }
+
+    .btn-create-alert {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(
+            135deg, #3b82f6, #2563eb
+        );
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        margin-top: 8px;
+    }
+
+    .btn-create-alert:hover {
+        opacity: 0.9;
+    }
+
+    /* Active alerts list */
+    .alerts-list-panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 24px;
+    }
+
+    .alert-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px;
+        background: #f9fafb;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #d1d5db;
+        transition: border-color 0.2s;
+    }
+
+    .alert-item:hover {
+        border-color: #3b82f6;
+    }
+
+    .alert-item-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .alert-type-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+    }
+
+    .icon-price {
+        background: rgba(59,130,246,0.15);
+    }
+
+    .icon-signal {
+        background: #dcfce7;
+    }
+
+    .icon-rsi {
+        background: #fee2e2;
+    }
+
+    .alert-info-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .alert-info-desc {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 2px;
+    }
+
+    .alert-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: #dcfce7;
+        border: 1px solid rgba(34,197,94,0.3);
+        color: #22c55e;
+    }
+
+    .status-triggered {
+        background: #fee2e2;
+        border: 1px solid rgba(239,68,68,0.3);
+        color: #ef4444;
+    }
+
+    .btn-delete {
+        padding: 6px 10px;
+        background: transparent;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        color: #6b7280;
+        font-size: 12px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .btn-delete:hover {
+        border-color: #ef4444;
+        color: #ef4444;
+    }
+
+    .empty-alerts {
+        text-align: center;
+        padding: 40px 20px;
+        color: #d1d5db;
+        font-size: 14px;
+    }
+
+    .empty-alerts-icon {
+        font-size: 40px;
+        margin-bottom: 12px;
+    }
+
+    /* Price value field - shown/hidden */
+    #price-value-group {
+        display: none;
+    }
+
+    .hint-text {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 6px;
+    }
+
+    .email-note {
+        background: rgba(59,130,246,0.1);
+        border: 1px solid rgba(59,130,246,0.2);
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 13px;
+        color: #60a5fa;
+        margin-bottom: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">🔔 Alerts</div>
+        <div class="page-subtitle">
+            Get email notifications when conditions are met
+        </div>
+    </div>
+</div>
+
+<div class="email-note">
+    📧 Alerts will be sent to
+    <strong>{{ current_user.email }}</strong>
+</div>
+
+<div class="alerts-grid">
+
+    <!-- CREATE ALERT FORM -->
+    <div class="alert-form-panel">
+        <div class="panel-title">
+            Create New Alert
+        </div>
+
+        <form method="POST" action="/alerts/create">
+
+            <div class="form-group">
+                <label>Coin</label>
+                <select name="symbol" id="symbol-select">
+                    <option value="BTCUSDT">
+                        Bitcoin (BTC)
+                    </option>
+                    <option value="ETHUSDT">
+                        Ethereum (ETH)
+                    </option>
+                    <option value="SOLUSDT">
+                        Solana (SOL)
+                    </option>
+                    <option value="BNBUSDT">
+                        BNB (BNB)
+                    </option>
+                    <option value="XRPUSDT">
+                        XRP (XRP)
+                    </option>
+                    <option value="ADAUSDT">
+                        Cardano (ADA)
+                    </option>
+                    <option value="DOGEUSDT">
+                        Dogecoin (DOGE)
+                    </option>
+                    <option value="DOTUSDT">
+                        Polkadot (DOT)
+                    </option>
+                    <option value="MATICUSDT">
+                        Polygon (MATIC)
+                    </option>
+                    <option value="LTCUSDT">
+                        Litecoin (LTC)
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Alert Type</label>
+                <select name="alert_type"
+                        id="alert-type-select"
+                        onchange="togglePriceField()">
+                    <option value="price_above">
+                        💰 Price goes Above
+                    </option>
+                    <option value="price_below">
+                        💰 Price goes Below
+                    </option>
+                    <option value="signal_buy">
+                        🤖 AI Signal — BUY
+                    </option>
+                    <option value="signal_sell">
+                        🤖 AI Signal — SELL
+                    </option>
+                    <option value="rsi_overbought">
+                        📊 RSI Overbought (>70)
+                    </option>
+                    <option value="rsi_oversold">
+                        📊 RSI Oversold (<30)
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group"
+                 id="price-value-group">
+                <label>Price Target (USD)</label>
+                <input type="number"
+                       name="value"
+                       id="price-value"
+                       placeholder="e.g. 65000"
+                       step="0.01">
+                <div class="hint-text">
+                    Enter the price that should
+                    trigger this alert
+                </div>
+            </div>
+
+            <button type="submit"
+                    class="btn-create-alert">
+                🔔 Create Alert
+            </button>
+        </form>
+    </div>
+
+    <!-- ACTIVE ALERTS LIST -->
+    <div class="alerts-list-panel">
+        <div class="panel-title">
+            Active Alerts
+            <span style="font-size:13px;
+                         color:#6b7280;
+                         font-weight:400;
+                         margin-left:8px;">
+                ({{ alerts|length }} total)
+            </span>
+        </div>
+
+        {% if alerts %}
+            {% for alert in alerts %}
+            <div class="alert-item">
+                <div class="alert-item-left">
+                    <div class="alert-type-icon
+                        {% if 'price' in alert.alert_type %}
+                            icon-price
+                        {% elif 'signal' in alert.alert_type %}
+                            icon-signal
+                        {% else %}
+                            icon-rsi
+                        {% endif %}">
+                        {% if 'price' in alert.alert_type %}
+                            💰
+                        {% elif 'signal' in alert.alert_type %}
+                            🤖
+                        {% else %}
+                            📊
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="alert-info-title">
+                            {{ alert.symbol
+                               .replace('USDT','') }}
+                            —
+                            {{ alert.alert_type
+                               .replace('_',' ')
+                               .title() }}
+                        </div>
+                        <div class="alert-info-desc">
+                            {% if alert.value %}
+                                Target: ${{ alert.value }}
+                            {% else %}
+                                Triggers on condition
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="alert-status">
+                    {% if alert.triggered %}
+                        <span class="status-badge
+                                     status-triggered">
+                            Triggered
+                        </span>
+                    {% else %}
+                        <span class="status-badge
+                                     status-active">
+                            Active
+                        </span>
+                    {% endif %}
+                    <a href="/alerts/delete/{{ alert.id }}"
+                       class="btn-delete">
+                        ✕
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+
+        {% else %}
+            <div class="empty-alerts">
+                <div class="empty-alerts-icon">🔔</div>
+                No alerts yet. Create one to get
+                started.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePriceField() {
+    const type = document.getElementById(
+        'alert-type-select'
+    ).value;
+    const group = document.getElementById(
+        'price-value-group'
+    );
+    const input = document.getElementById(
+        'price-value'
+    );
+
+    if (type === 'price_above' ||
+        type === 'price_below') {
+        group.style.display = 'block';
+        input.required = true;
+    } else {
+        group.style.display = 'none';
+        input.required = false;
+    }
+}
+
+// Run on page load
+togglePriceField();
+</script>
+{% endblock %}

@@ -1,0 +1,814 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ symbol }} Detail{% endblock %}
+
+{% block extra_css %}
+<style>
+    .coin-detail-grid {
+        display: grid;
+        grid-template-columns: 60% 38%;
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .chart-panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 24px;
+    }
+
+    .chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    .chart-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .timeframe-btns {
+        display: flex;
+        gap: 4px;
+    }
+
+    .tf-btn {
+        padding: 5px 10px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: transparent;
+        color: #6b7280;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tf-btn.active, .tf-btn:hover {
+        background: #3b82f6;
+        border-color: #3b82f6;
+        color: white;
+    }
+
+    .grafana-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: rgba(240,100,40,0.15);
+        border: 1px solid rgba(240,100,40,0.4);
+        border-radius: 8px;
+        color: #f97316;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+        margin-bottom: 20px;
+    }
+
+    .grafana-btn:hover {
+        background: rgba(240,100,40,0.25);
+    }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat-box {
+        background: #f9fafb;
+        border-radius: 10px;
+        padding: 14px;
+        text-align: center;
+    }
+
+    .stat-box-label {
+        font-size: 11px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+    }
+
+    .stat-box-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #f9fafb;
+    }
+
+    .signal-panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 24px;
+    }
+
+    .signal-panel-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 20px;
+    }
+
+    .model-row { margin-bottom: 16px; }
+
+    .model-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+    }
+
+    .model-name {
+        font-size: 13px;
+        color: #4b5563;
+        font-weight: 500;
+    }
+
+    .model-signal {
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .signal-buy  { color: #22c55e; }
+    .signal-sell { color: #ef4444; }
+    .signal-hold { color: #eab308; }
+
+    .confidence-bar {
+        height: 6px;
+        background: #ffffff;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .confidence-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.8s ease;
+    }
+
+    .fill-buy  { background: #22c55e; }
+    .fill-sell { background: #ef4444; }
+    .fill-hold { background: #eab308; }
+
+    .ensemble-box {
+        background: rgba(59,130,246,0.1);
+        border: 1px solid rgba(59,130,246,0.3);
+        border-radius: 10px;
+        padding: 16px;
+        margin-top: 20px;
+        text-align: center;
+    }
+
+    .ensemble-label {
+        font-size: 11px;
+        color: #6b7280;
+        margin-bottom: 8px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .ensemble-signal {
+        font-size: 36px;
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+
+    .ensemble-conf {
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .metric-card {
+        background: #f9fafb;
+        border-radius: 10px;
+        padding: 14px;
+    }
+
+    .metric-label {
+        font-size: 11px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+    }
+
+    .metric-value {
+        font-size: 16px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .metric-note {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 14px;
+        margin-bottom: 20px;
+        transition: color 0.2s;
+    }
+
+    .back-btn:hover { color: #3b82f6; }
+
+    .coin-hero {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .coin-hero-icon {
+        width: 52px;
+        height: 52px;
+        background: rgba(59,130,246,0.15);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+    }
+
+    .coin-hero-name {
+        font-size: 28px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .coin-hero-sym {
+        font-size: 14px;
+        color: #6b7280;
+        margin-top: 2px;
+    }
+
+    .coin-price-live {
+        margin-left: auto;
+        text-align: right;
+    }
+
+    .coin-price-num {
+        font-size: 28px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .coin-price-change {
+        font-size: 14px;
+        font-weight: 600;
+        margin-top: 2px;
+    }
+
+    .positive { color: #22c55e; }
+    .negative { color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<a href="/markets" class="back-btn">← Back to Markets</a>
+
+{% set coin_info = {
+    'BTCUSDT':   ['Bitcoin',   '₿'],
+    'ETHUSDT':   ['Ethereum',  'Ξ'],
+    'SOLUSDT':   ['Solana',    '◎'],
+    'BNBUSDT':   ['BNB',       '⬡'],
+    'XRPUSDT':   ['XRP',       '✕'],
+    'ADAUSDT':   ['Cardano',   '₳'],
+    'DOGEUSDT':  ['Dogecoin',  'Ð'],
+    'DOTUSDT':   ['Polkadot',  '●'],
+    'MATICUSDT': ['Polygon',   '⬡'],
+    'LTCUSDT':   ['Litecoin',  'Ł']
+} %}
+
+{% set name = coin_info[symbol][0]
+              if symbol in coin_info else symbol %}
+{% set icon = coin_info[symbol][1]
+              if symbol in coin_info else '?' %}
+
+<!-- Coin Header -->
+<div class="coin-hero">
+    <div class="coin-hero-icon">{{ icon }}</div>
+    <div>
+        <div class="coin-hero-name">{{ name }}</div>
+        <div class="coin-hero-sym">
+            {{ symbol.replace('USDT','') }}/USDT
+        </div>
+    </div>
+    <div class="coin-price-live">
+        <div class="coin-price-num"
+             id="live-price">Loading...</div>
+        <div class="coin-price-change"
+             id="live-change">—</div>
+    </div>
+    <div class="live-badge" style="margin-left:16px;">
+        <div class="live-dot"></div> Live
+    </div>
+</div>
+
+<!-- Watchlist Button -->
+{% if in_watchlist %}
+<a href="/watchlist/remove/{{ symbol }}"
+   style="display:inline-flex; align-items:center;
+          gap:6px; padding:8px 16px; margin-bottom:20px;
+          margin-right:8px;
+          background:rgba(234,179,8,0.15);
+          border:1px solid rgba(234,179,8,0.4);
+          border-radius:8px; color:#eab308;
+          font-size:13px; font-weight:600;
+          text-decoration:none;">
+    ⭐ Remove from Watchlist
+</a>
+{% else %}
+<a href="/watchlist/add/{{ symbol }}"
+   style="display:inline-flex; align-items:center;
+          gap:6px; padding:8px 16px; margin-bottom:20px;
+          margin-right:8px;
+          background:rgba(34,197,94,0.15);
+          border:1px solid rgba(34,197,94,0.4);
+          border-radius:8px; color:#22c55e;
+          font-size:13px; font-weight:600;
+          text-decoration:none;">
+    ☆ Add to Watchlist
+</a>
+{% endif %}
+
+<!-- Grafana Button -->
+<a href="{{ grafana_url }}"
+   target="_blank"
+   class="grafana-btn">
+    📊 Open Full Grafana Dashboard →
+</a>
+
+<!-- Stats Row -->
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-box-label">24h High</div>
+        <div class="stat-box-value positive"
+             id="stat-high">—</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-box-label">24h Low</div>
+        <div class="stat-box-value negative"
+             id="stat-low">—</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-box-label">24h Volume</div>
+        <div class="stat-box-value"
+             id="stat-vol">—</div>
+    </div>
+</div>
+
+<!-- Main Grid -->
+<div class="coin-detail-grid">
+
+    <!-- LEFT — Charts -->
+    <div class="chart-panel">
+        <div class="chart-header">
+            <div class="chart-title">Price Chart</div>
+            <div class="timeframe-btns">
+                <button class="tf-btn active"
+                        onclick="loadChart(30, this)">
+                    30m
+                </button>
+                <button class="tf-btn"
+                        onclick="loadChart(60, this)">
+                    1h
+                </button>
+                <button class="tf-btn"
+                        onclick="loadChart(240, this)">
+                    4h
+                </button>
+            </div>
+        </div>
+        <canvas id="priceChart" height="280"></canvas>
+
+
+    </div>
+
+    <!-- RIGHT — ML Signals -->
+    <div class="signal-panel">
+        <div class="signal-panel-title">
+            🤖 AI Model Predictions
+        </div>
+
+        <!-- LSTM -->
+        <div class="model-row">
+            <div class="model-label">
+                <span class="model-name">
+                    LSTM Neural Network
+                </span>
+                <span class="model-signal signal-hold"
+                      id="lstm-signal">—</span>
+            </div>
+            <div class="confidence-bar">
+                <div class="confidence-fill fill-hold"
+                     id="lstm-bar"
+                     style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- XGBoost -->
+        <div class="model-row">
+            <div class="model-label">
+                <span class="model-name">
+                    XGBoost Classifier
+                </span>
+                <span class="model-signal signal-hold"
+                      id="xgb-signal">—</span>
+            </div>
+            <div class="confidence-bar">
+                <div class="confidence-fill fill-hold"
+                     id="xgb-bar"
+                     style="width:0%"></div>
+            </div>
+        </div>
+
+       
+
+        <!-- Ensemble -->
+        <div class="ensemble-box">
+            <div class="ensemble-label">
+                Ensemble Verdict
+            </div>
+            <div class="ensemble-signal signal-hold"
+                 id="ensemble-signal">—</div>
+            <div class="ensemble-conf"
+                 id="ensemble-conf">
+                Waiting for models...
+            </div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">RSI (14)</div>
+                <div class="metric-value"
+                     id="rsi-value">—</div>
+                <div class="metric-note"
+                     id="rsi-note">—</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">MACD</div>
+                <div class="metric-value"
+                     id="macd-value">—</div>
+                <div class="metric-note"
+                     id="macd-note">—</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">
+                    Volume Ratio
+                </div>
+                <div class="metric-value"
+                     id="vol-value">—</div>
+                <div class="metric-note">
+                    vs 20-period avg
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">
+                    Volatility (ATR)
+                </div>
+                <div class="metric-value"
+                     id="atr-value">—</div>
+                <div class="metric-note">
+                    Avg True Range
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js">
+</script>
+<script>
+const symbol     = "{{ symbol }}";
+const grafanaUrl = "{{ grafana_url }}";
+let priceChart   = null;
+let priceHistory  = [];
+let timeHistory   = [];
+let currentMinutes = 30;
+
+function formatPrice(p) {
+    if (p >= 1000)
+        return '$' + p.toLocaleString('en-US',
+            {minimumFractionDigits:2,
+             maximumFractionDigits:2});
+    if (p >= 1) return '$' + p.toFixed(4);
+    return '$' + p.toFixed(6);
+}
+
+function formatVol(v) {
+    if (v >= 1e9) return (v/1e9).toFixed(2) + 'B';
+    if (v >= 1e6) return (v/1e6).toFixed(2) + 'M';
+    if (v >= 1e3) return (v/1e3).toFixed(2) + 'K';
+    return v.toFixed(2);
+}
+
+// Fetch live price and update header stats
+async function fetchLivePrice() {
+    try {
+        const res = await fetch(
+            `https://api.binance.com/api/v3/ticker/24hr` +
+            `?symbol=${symbol}`
+        );
+        const d = await res.json();
+
+        const price  = parseFloat(d.lastPrice);
+        const change = parseFloat(d.priceChangePercent);
+        const high   = parseFloat(d.highPrice);
+        const low    = parseFloat(d.lowPrice);
+        const vol    = parseFloat(d.volume);
+        const now    = new Date().toLocaleTimeString();
+
+        // Update header
+        document.getElementById('live-price')
+            .textContent = formatPrice(price);
+
+        const changeEl =
+            document.getElementById('live-change');
+        const sign = change >= 0 ? '+' : '';
+        changeEl.textContent =
+            `${sign}${change.toFixed(2)}%`;
+        changeEl.style.color =
+            change >= 0 ? '#22c55e' : '#ef4444';
+
+        // Update stats
+        document.getElementById('stat-high')
+            .textContent = formatPrice(high);
+        document.getElementById('stat-low')
+            .textContent = formatPrice(low);
+        document.getElementById('stat-vol')
+            .textContent = formatVol(vol);
+
+        // Add to live history
+        priceHistory.push(price);
+        timeHistory.push(now);
+
+        // Keep last 60 live points
+        if (priceHistory.length > 60) {
+            priceHistory.shift();
+            timeHistory.shift();
+        }
+
+        updateCharts();
+
+    } catch(e) {
+        console.error('Price fetch error:', e);
+    }
+}
+
+// Fetch historical kline data from Binance
+async function fetchHistoricalData(minutes) {
+    try {
+    
+        const interval =
+            minutes <= 60  ? '1m' :
+            minutes <= 240 ? '5m' : '15m';
+
+        const limit =
+            minutes <= 60  ? minutes :
+            minutes <= 240 ? Math.ceil(minutes / 5) :Math.ceil(minutes / 15);
+        const res = await fetch(
+            `https://api.binance.com/api/v3/klines` +
+            `?symbol=${symbol}` +
+            `&interval=${interval}` +
+            `&limit=${limit}`
+        );
+        const data = await res.json();
+
+        // Reset arrays
+        priceHistory  = [];
+        timeHistory   = [];
+
+        // Parse kline data
+        // Format: [openTime,open,high,low,close,volume,...]
+        data.forEach(k => {
+            const time   = new Date(k[0])
+                .toLocaleTimeString();
+            const close  = parseFloat(k[4]);
+            timeHistory.push(time);
+            priceHistory.push(close);
+        });
+
+        updateCharts();
+        console.log(
+            `Loaded ${data.length} historical candles`
+        );
+
+    } catch(e) {
+        console.error('Historical data error:', e);
+    }
+}
+
+function buildPriceChart() {
+    const ctx = document.getElementById('priceChart')
+        .getContext('2d');
+    priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: timeHistory,
+            datasets: [{
+                label: symbol,
+                data: priceHistory,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59,130,246,0.08)',
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx =>
+                            formatPrice(ctx.parsed.y)
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#6b7280',
+                        maxTicksLimit: 6,
+                        font: { size: 11 }
+                    },
+                    grid: { color: '#1e2d3d' }
+                },
+                y: {
+                    ticks: {
+                        color: '#6b7280',
+                        font: { size: 11 },
+                        callback: v => formatPrice(v)
+                    },
+                    grid: { color: '#1e2d3d' }
+                }
+            }
+        }
+    });
+}
+
+function updateCharts() {
+    if (priceChart) {
+        priceChart.data.labels =
+            [...timeHistory];
+        priceChart.data.datasets[0].data =
+            [...priceHistory];
+        priceChart.update('none');
+    }
+}
+
+function loadChart(minutes, btn) {
+    currentMinutes = minutes;
+    document.querySelectorAll('.tf-btn').forEach(
+        b => b.classList.remove('active')
+    );
+    btn.classList.add('active');
+
+    if (priceChart)  priceChart.destroy();
+    priceHistory  = [];
+    timeHistory   = [];
+    buildPriceChart();
+
+    fetchHistoricalData(minutes).then(() => {
+        fetchLivePrice();
+    });
+}
+
+// Signal helpers
+function setSignalColor(el, signal) {
+    el.classList.remove(
+        'signal-buy','signal-sell','signal-hold'
+    );
+    const s = (signal || '').toUpperCase();
+    if (s === 'BUY')  el.classList.add('signal-buy');
+    if (s === 'SELL') el.classList.add('signal-sell');
+    if (s === 'HOLD') el.classList.add('signal-hold');
+}
+
+function setBarColor(bar, signal) {
+    bar.classList.remove(
+        'fill-buy','fill-sell','fill-hold'
+    );
+    const s = (signal || '').toUpperCase();
+    if (s === 'BUY')  bar.classList.add('fill-buy');
+    if (s === 'SELL') bar.classList.add('fill-sell');
+    if (s === 'HOLD') bar.classList.add('fill-hold');
+}
+
+async function loadSignals() {
+    try {
+        const res  = await fetch(`/api/signal/${symbol}`);
+        const data = await res.json();
+
+        const lstmEl  =
+            document.getElementById('lstm-signal');
+        const lstmBar =
+            document.getElementById('lstm-bar');
+        lstmEl.textContent  =
+            data.lstm_signal || 'HOLD';
+        lstmBar.style.width =
+            (data.lstm_conf || 0) + '%';
+        setSignalColor(lstmEl,  data.lstm_signal);
+        setBarColor(lstmBar,    data.lstm_signal);
+
+        const xgbEl  =
+            document.getElementById('xgb-signal');
+        const xgbBar =
+            document.getElementById('xgb-bar');
+        xgbEl.textContent  =
+            data.xgb_signal || 'HOLD';
+        xgbBar.style.width =
+            (data.xgb_conf || 0) + '%';
+        setSignalColor(xgbEl,  data.xgb_signal);
+        setBarColor(xgbBar,    data.xgb_signal);
+
+        
+
+        const ensEl   =
+            document.getElementById('ensemble-signal');
+        const ensConf =
+            document.getElementById('ensemble-conf');
+        ensEl.textContent   = data.signal || 'HOLD';
+        ensConf.textContent =
+            `Confidence: ${data.confidence || 0}%`;
+        setSignalColor(ensEl, data.signal);
+
+    } catch(e) {
+        console.error('Signal error:', e);
+    }
+}
+
+async function loadIndicators() {
+    try {
+        const res  =
+            await fetch(`/api/indicators/${symbol}`);
+        const data = await res.json();
+
+        if (data.rsi !== undefined) {
+            document.getElementById('rsi-value')
+                .textContent = data.rsi.toFixed(1);
+            document.getElementById('rsi-note')
+                .textContent = data.rsi_note || '';
+        }
+        if (data.macd !== undefined) {
+            document.getElementById('macd-value')
+                .textContent = data.macd.toFixed(4);
+            document.getElementById('macd-note')
+                .textContent = data.macd_note || '';
+        }
+        if (data.volume_ratio !== undefined) {
+            document.getElementById('vol-value')
+                .textContent =
+                    data.volume_ratio.toFixed(2) + 'x';
+        }
+        if (data.atr !== undefined) {
+            document.getElementById('atr-value')
+                .textContent = data.atr.toFixed(4);
+        }
+    } catch(e) {
+        console.error('Indicator error:', e);
+    }
+}
+
+// ── INIT ──────────────────────────────────────────────
+buildPriceChart();
+
+// Load 30 min history first then go live
+fetchHistoricalData(30).then(() => {
+    fetchLivePrice();
+});
+
+loadSignals();
+loadIndicators();
+
+// Auto refresh
+setInterval(fetchLivePrice, 10000);
+setInterval(loadSignals,    60000);
+setInterval(loadIndicators, 60000);
+</script>
+{% endblock %}

@@ -1,0 +1,506 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Markets{% endblock %}
+
+{% block extra_css %}
+<style>
+    .coins-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+
+    .coin-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: block;
+    }
+
+    .coin-card:hover {
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(59,130,246,0.1);
+    }
+
+    .coin-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .coin-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .coin-symbol {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 2px;
+    }
+
+    .coin-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        background: rgba(59,130,246,0.1);
+    }
+
+    .coin-price {
+        font-size: 22px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 8px;
+    }
+
+    .coin-change {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+
+    .signal-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+    }
+
+    .signal-buy {
+        background:#dcfce7;
+        border: 1px solid rgba(34,197,94,0.4);
+        color: #22c55e;
+    }
+
+    .signal-sell {
+        background: #fee2e2;
+        border: 1px solid rgba(239,68,68,0.4);
+        color: #ef4444;
+    }
+
+    .signal-hold {
+        background: #fee2e2;
+        border: 1px solid rgba(234,179,8,0.4);
+        color: #eab308;
+    }
+
+    .signal-na {
+        background: rgba(107,114,128,0.15);
+        border: 1px solid rgba(107,114,128,0.3);
+        color: #6b7280;
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 16px;
+    }
+
+    .market-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 32px;
+    }
+
+    .market-table th {
+        padding: 14px 20px;
+        text-align: left;
+        font-size: 12px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+
+    .market-table td {
+        padding: 14px 20px;
+        font-size: 14px;
+        color: #374151;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .market-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .market-table tr:hover td {
+        background: rgba(0,0,0,0.02);
+    }
+
+    .table-coin-name {
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .table-coin-sym {
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    .loading {
+        color: #d1d5db;
+        font-size: 14px;
+    }
+
+    
+
+
+    .positive { color: #22c55e; }
+    .negative { color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Markets</div>
+        <div class="page-subtitle">
+            Live prices and AI signals for top cryptocurrencies
+        </div>
+    </div>
+    <div class="live-badge">
+        <div class="live-dot"></div> Live
+    </div>
+</div>
+
+<!-- AI Signal Coins -->
+<div class="section-title">🤖 AI Signal Coins</div>
+<div class="coins-grid" id="ml-coins-grid">
+    <div class="loading">Loading live data...</div>
+</div>
+
+<!-- All Coins Table -->
+<div class="section-title" style="margin-top:8px;">
+    📈 All Monitored Coins
+</div>
+<table class="market-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Coin</th>
+            <th>Price</th>
+            <th>24h Change</th>
+            <th>24h High</th>
+            <th>24h Low</th>
+            <th>Signal</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody id="market-table-body">
+        <tr>
+            <td colspan="8" class="loading">
+                Loading market data...
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Grafana Section -->
+
+    
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ML_COINS = [
+    'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT'
+];
+const ALL_COINS = [
+    'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT',
+    'ADAUSDT','DOGEUSDT','DOTUSDT','MATICUSDT','LTCUSDT'
+];
+const COIN_NAMES = {
+    'BTCUSDT':   ['Bitcoin',   '₿'],
+    'ETHUSDT':   ['Ethereum',  'Ξ'],
+    'SOLUSDT':   ['Solana',    '◎'],
+    'BNBUSDT':   ['BNB',       '⬡'],
+    'XRPUSDT':   ['XRP',       '✕'],
+    'ADAUSDT':   ['Cardano',   '₳'],
+    'DOGEUSDT':  ['Dogecoin',  'Ð'],
+    'DOTUSDT':   ['Polkadot',  '●'],
+    'MATICUSDT': ['Polygon',   '⬡'],
+    'LTCUSDT':   ['Litecoin',  'Ł']
+};
+
+async function fetchPrice(symbol) {
+    try {
+        const res = await fetch(
+            `https://api.binance.com/api/v3/ticker/24hr` +
+            `?symbol=${symbol}`
+        );
+        const d = await res.json();
+        return {
+            price:  parseFloat(d.lastPrice),
+            change: parseFloat(d.priceChangePercent),
+            high:   parseFloat(d.highPrice),
+            low:    parseFloat(d.lowPrice),
+            volume: parseFloat(d.volume)
+        };
+    } catch(e) { return null; }
+}
+
+async function fetchSignal(symbol) {
+    try {
+        const res  = await fetch(`/api/signal/${symbol}`);
+        const data = await res.json();
+        return data;
+    } catch(e) {
+        return { signal: 'N/A', confidence: 0 };
+    }
+}
+
+function formatPrice(price) {
+    if (price >= 1000)
+        return '$' + price.toLocaleString('en-US',
+            {minimumFractionDigits:2,
+             maximumFractionDigits:2});
+    if (price >= 1)  return '$' + price.toFixed(4);
+    return '$' + price.toFixed(6);
+}
+
+function formatVol(v) {
+    if (v >= 1e9) return (v/1e9).toFixed(2) + 'B';
+    if (v >= 1e6) return (v/1e6).toFixed(2) + 'M';
+    if (v >= 1e3) return (v/1e3).toFixed(2) + 'K';
+    return v.toFixed(2);
+}
+
+function signalBadge(signal) {
+    const s = (signal || 'N/A').toUpperCase();
+    if (s === 'BUY')
+        return `<span class="signal-badge signal-buy">
+                    BUY
+                </span>`;
+    if (s === 'SELL')
+        return `<span class="signal-badge signal-sell">
+                    SELL
+                </span>`;
+    if (s === 'HOLD')
+        return `<span class="signal-badge signal-hold">
+                    HOLD
+                </span>`;
+    return `<span class="signal-badge signal-na">N/A</span>`;
+}
+
+async function loadMLCards() {
+    const grid = document.getElementById('ml-coins-grid');
+    grid.innerHTML = '<div class="loading">Loading live data...</div>';
+
+    // Fetch all prices in parallel
+    const results = await Promise.all(
+        ML_COINS.map(symbol =>
+            Promise.all([
+                fetchPrice(symbol),
+                fetchSignal(symbol)
+            ]).then(([price, signal]) =>
+                ({ symbol, price, signal })
+            )
+        )
+    );
+
+    grid.innerHTML = '';
+
+    for (const { symbol, price, signal } of results) {
+        if (!price) continue;
+
+        const [name, icon] = COIN_NAMES[symbol];
+        const changeClass  =
+            price.change >= 0 ? 'positive' : 'negative';
+        const changeSign   =
+            price.change >= 0 ? '+' : '';
+
+        const card = document.createElement('a');
+        card.href      = `/coin/${symbol}`;
+        card.className = 'coin-card';
+        card.innerHTML = `
+            <div class="coin-header">
+                <div>
+                    <div class="coin-name">${name}</div>
+                    <div class="coin-symbol">
+                        ${symbol.replace('USDT','')}
+                    </div>
+                </div>
+                <div class="coin-icon">${icon}</div>
+            </div>
+            <div class="coin-price">
+                ${formatPrice(price.price)}
+            </div>
+            <div class="coin-change ${changeClass}">
+                ${changeSign}${price.change.toFixed(2)}%
+                (24h)
+            </div>
+            ${signalBadge(signal.signal)}
+        `;
+        grid.appendChild(card);
+    }
+}
+
+
+async function loadMarketTable() {
+    const tbody =
+        document.getElementById('market-table-body');
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading...</td></tr>';
+
+    const results = await Promise.all(
+        ALL_COINS.map(symbol =>
+            fetchPrice(symbol).then(price =>
+                ({ symbol, price })
+            )
+        )
+    );
+
+    tbody.innerHTML = '';
+
+    for (let i = 0; i < results.length; i++) {
+        const { symbol, price } = results[i];
+        if (!price) continue;
+
+        const [name, icon] = COIN_NAMES[symbol];
+        const isML        = ML_COINS.includes(symbol);
+        const changeClass =
+            price.change >= 0 ? 'positive' : 'negative';
+        const changeSign  =
+            price.change >= 0 ? '+' : '';
+
+        const tr = document.createElement('tr');
+        tr.dataset.symbol = symbol;
+        tr.innerHTML = `
+            <td>${i + 1}</td>
+            <td>
+                <div class="table-coin-name">
+                    ${icon} ${name}
+                </div>
+                <div class="table-coin-sym">
+                    ${symbol.replace('USDT','')}
+                </div>
+            </td>
+            <td>
+                <strong>${formatPrice(price.price)}</strong>
+            </td>
+            <td class="${changeClass}">
+                ${changeSign}${price.change.toFixed(2)}%
+            </td>
+            <td class="positive">
+                ${formatPrice(price.high)}
+            </td>
+            <td class="negative">
+                ${formatPrice(price.low)}
+            </td>
+            <td id="sig-${symbol}">
+                ${isML
+                    ? signalBadge('HOLD')
+                    : `<span class="signal-badge signal-na">Live Only</span>`
+                }
+            </td>
+            <td>
+                ${isML
+                    ? `<a href="/coin/${symbol}"
+                          style="color:#3b82f6;font-size:13px;
+                                 text-decoration:none;">
+                           View →
+                        </a>`
+                    : `<span style="color:#374151;font-size:13px;">—</span>`
+                }
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        if (isML) {
+            fetchSignal(symbol).then(sig => {
+                const el =
+                    document.getElementById(`sig-${symbol}`);
+                if (el)
+                    el.innerHTML = signalBadge(sig.signal);
+            });
+        }
+    }
+}
+
+let isLoading = false;
+let signalsLoaded = false;
+
+// Refresh only prices (fast, every 10s)
+async function refreshPricesOnly() {
+    if (isLoading) return;
+    isLoading = true;
+
+    // Update ML card prices
+    const cardResults = await Promise.all(
+        ML_COINS.map(symbol =>
+            fetchPrice(symbol).then(price => ({ symbol, price }))
+        )
+    );
+    for (const { symbol, price } of cardResults) {
+        if (!price) continue;
+        const card = document.querySelector(`a.coin-card[href="/coin/${symbol}"]`);
+        if (!card) continue;
+        const priceEl  = card.querySelector('.coin-price');
+        const changeEl = card.querySelector('.coin-change');
+        if (priceEl)  priceEl.textContent = formatPrice(price.price);
+        if (changeEl) {
+            const sign = price.change >= 0 ? '+' : '';
+            const cls  = price.change >= 0 ? 'positive' : 'negative';
+            changeEl.textContent  = `${sign}${price.change.toFixed(2)}% (24h)`;
+            changeEl.className    = `coin-change ${cls}`;
+        }
+    }
+
+    // Update table prices
+    const tableResults = await Promise.all(
+        ALL_COINS.map(symbol =>
+            fetchPrice(symbol).then(price => ({ symbol, price }))
+        )
+    );
+    for (const { symbol, price } of tableResults) {
+        if (!price) continue;
+        const row = document.querySelector(`tr[data-symbol="${symbol}"]`);
+        if (!row) continue;
+        const cells = row.querySelectorAll('td');
+        const sign = price.change >= 0 ? '+' : '';
+        const cls  = price.change >= 0 ? 'positive' : 'negative';
+        if (cells[2]) cells[2].innerHTML = `<strong>${formatPrice(price.price)}</strong>`;
+        if (cells[3]) { cells[3].textContent = `${sign}${price.change.toFixed(2)}%`; cells[3].className = cls; }
+        if (cells[4]) { cells[4].textContent = formatPrice(price.high); }
+        if (cells[5]) { cells[5].textContent = formatPrice(price.low); }
+    }
+
+    isLoading = false;
+}
+
+// Full init (prices + signals) — run once on load and every 60s for signals
+async function init() {
+    if (isLoading) return;
+    isLoading = true;
+    await loadMLCards();
+    await loadMarketTable();
+    isLoading = false;
+    signalsLoaded = true;
+}
+
+init();
+// Refresh prices every 10s (same as coin.html)
+setInterval(refreshPricesOnly, 10000);
+// Refresh signals every 60s
+setInterval(init, 60000);
+</script>
+{% endblock %}
